@@ -1,0 +1,44 @@
+name: CI/CD Pipeline API
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-publish-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      - name: Login a Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Configurar Docker Buildx (Para AWS)
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build y Push de la Imagen (Paso 1 y 2)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.DOCKER_USER }}/auy1104-api-ejemplo:latest
+
+      - name: Despliegue y Verificación en K3s (Paso 3 y 4)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
+          script: |
+            echo "Reiniciando el despliegue en Kubernetes..."
+            kubectl rollout restart deployment api-ejemplo-deployment
+            sleep 10
+            echo "Verificando estado de los Pods..."
+            kubectl get pods
+            echo "Realizando prueba de conexión local (Verify)..."
+            curl -s http://localhost:30090/health

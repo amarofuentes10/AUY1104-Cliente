@@ -12,6 +12,12 @@ function createApp() {
 
   app.use(express.json());
 
+  app.get('/', (req, res) => {
+    res.status(200).json({ 
+        mensaje: "¡API de Amaro desplegada con éxito en AWS y Kubernetes!" 
+    });
+  });
+
   app.get('/health', (req, res) => {
     res.json(healthPayload());
   });
